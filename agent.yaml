@@ -1,0 +1,61 @@
+# Azure AI Foundry Agent Configuration
+# This file defines the agent for deployment to Foundry's managed infrastructure
+# For more information, see: https://learn.microsoft.com/azure/ai-foundry/agents
+
+name: IntakeFormAssistant
+description: Agent that assists with intake forms using knowledge base access via MCP
+
+# Agent definition
+definition:
+  # Type of agent (prompt-based agent)
+  kind: prompt
+  
+  # Model configuration
+  model: gpt-5-mini
+  
+  # Agent instructions
+  instructions: |
+    ## Role
+    You are assisting users complete an intake form and have access to a knowledge
+    base that contains project information.
+  
+  # Tools configuration
+  tools:
+    # MCP tool for knowledge base access
+    - type: mcp
+      server_label: kb_kb_archive_f1nat
+      server_url: ${MCP_SERVER_URL}
+      require_approval: never
+      project_connection_id: kb-kb-archive-f1nat
+
+# Deployment configuration
+deployment:
+  # Hosted agent deployment (runs on Foundry infrastructure)
+  type: hosted
+  
+  # Scaling configuration
+  scaling:
+    min_instances: 1
+    max_instances: 10
+    auto_scale: true
+  
+  # Resource allocation
+  resources:
+    cpu: 1
+    memory: 2Gi
+  
+  # Environment variables (template - actual values from .env)
+  environment:
+    - name: AGENT_MODEL
+      value: ${AGENT_MODEL}
+    - name: MCP_SERVER_URL
+      value: ${MCP_SERVER_URL}
+    - name: LOG_LEVEL
+      value: ${LOG_LEVEL:-INFO}
+
+# AG-UI endpoint configuration
+endpoints:
+  - name: agui
+    type: ag-ui
+    path: /
+    enabled: true

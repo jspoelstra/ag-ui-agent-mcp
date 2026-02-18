@@ -1,6 +1,6 @@
 # AG-UI Agent with MCP on Azure Foundry
 
-A complete example of creating an agent using Microsoft Agent Framework (MAF), with access to MCP (Model Context Protocol) tools, deployed on Foundry (Azure), that exposes the AG-UI protocol.
+A complete example of creating an agent using Microsoft Agent Framework (MAF), with access to MCP (Model Context Protocol) tools, deployed as a **hosted agent on Azure AI Foundry**, that exposes the AG-UI protocol.
 
 > **📖 New to this implementation?** See [AG_UI_AND_FOUNDRY_EXPLAINED.md](./AG_UI_AND_FOUNDRY_EXPLAINED.md) for detailed explanations of how AG-UI support and Azure Foundry deployment work in this code.
 
@@ -10,34 +10,45 @@ This repository demonstrates:
 - ✅ **Agent Creation**: Using Microsoft Agent Framework (MAF) to create an intelligent agent
 - ✅ **MCP Integration**: Connecting to knowledge sources via Model Context Protocol
 - ✅ **AG-UI Endpoint**: Exposing the agent via AG-UI protocol for frontend integration
-- ✅ **Azure Deployment**: Deploying to Azure Foundry platform
-- ✅ **Production Ready**: Complete with Docker support and deployment scripts
+- ✅ **Foundry Hosted Deployment**: Deploying as a fully managed agent on Azure AI Foundry
+- ✅ **Production Ready**: Complete with infrastructure-as-code and deployment scripts
 
 ## Key Concepts
 
+### Foundry v2 Hosted Agent Deployment
+This repository uses **Foundry v2 hosted agent deployment** where the agent runs on Foundry's managed infrastructure, not locally or in containers you manage. Benefits include:
+- **Fully Managed**: Foundry handles infrastructure, scaling, and monitoring
+- **One-Command Deployment**: Use `azd up` to deploy everything
+- **Enterprise-Ready**: Built-in security, compliance, and governance
+- **Auto-Scaling**: Automatically scales from 1-10 instances based on demand
+
+See [detailed explanation](./AG_UI_AND_FOUNDRY_EXPLAINED.md#foundry-v2-hosted-agent-deployment-recommended).
+
 ### AG-UI Support
 This code **HAS full AG-UI support** via the `agent-framework-ag-ui` package. The function `add_agent_framework_fastapi_endpoint()` IS how AG-UI protocol endpoints are exposed in the Microsoft Agent Framework. See [detailed explanation](./AG_UI_AND_FOUNDRY_EXPLAINED.md#1-ag-ui-support---why-add_agent_framework_fastapi_endpoint).
-
-### Azure Foundry Deployment  
-This code **IS configured for Azure Foundry** via the `AzureAIProjectAgentProvider`. When you use this provider, your agent runs within Azure AI Project infrastructure. See [detailed explanation](./AG_UI_AND_FOUNDRY_EXPLAINED.md#2-azure-foundry-deployment---how-is-it-deployed).
 
 ## Features
 
 - **Intake Form Assistant**: Helps users complete intake forms with access to knowledge base
 - **Knowledge Base Access**: Connects to Azure AI Search via MCP for project information
 - **AG-UI Protocol**: Exposes standard AG-UI endpoint for frontend frameworks (CopilotKit, etc.)
-- **Azure Native**: Built for Azure Foundry with full Azure integration
-- **Containerized**: Docker support for easy deployment to Azure services
+- **Foundry Hosted**: Deployed as a managed service on Azure AI Foundry
+- **Auto-Scaling**: Automatically scales from 1-10 instances based on demand
+- **Integrated Monitoring**: Built-in Application Insights and logging
 
 ## Quick Start
 
 ### Prerequisites
 
-- Python 3.11 or higher
-- Azure subscription with AI Project access
-- Azure CLI installed and configured (`az login`)
+- **Azure Developer CLI (azd)**: Version 1.23.0 or later
+  - macOS/Linux: `curl -fsSL https://aka.ms/install-azd.sh | bash`
+  - Windows: `winget install microsoft.azd`
+- **Docker Desktop**: For building container images
+- **Azure CLI**: For authentication (`az login`)
+- **Azure subscription**: With AI Foundry access
+- **Python 3.11+**: For local development (optional)
 
-### Installation
+### Deployment to Foundry (Recommended)
 
 1. **Clone the repository**
    ```bash
@@ -45,23 +56,67 @@ This code **IS configured for Azure Foundry** via the `AzureAIProjectAgentProvid
    cd ag-ui-agent-mcp
    ```
 
-2. **Install dependencies**
+2. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
+
+3. **Login to Azure**
+   ```bash
+   az login
+   ```
+
+4. **Deploy to Foundry**
+   ```bash
+   # Initialize deployment (first time only)
+   azd init
+   
+   # Deploy everything (infrastructure + agent)
+   azd up
+   ```
+
+   This single command will:
+   - Provision Azure AI Foundry project
+   - Build and push Docker image
+   - Deploy agent as a hosted service
+   - Configure auto-scaling and monitoring
+   - Expose AG-UI endpoint
+
+5. **View deployment**
+   ```bash
+   # Check agent status
+   azd ai agent show
+   
+   # View logs
+   azd monitor --logs
+   ```
+
+The AG-UI endpoint will be available at the Foundry-provided URL.
+
+### Local Development (Optional)
+
+For development and testing, you can run the agent locally:
+
+1. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Configure environment**
+2. **Configure environment**
    ```bash
    cp .env.example .env
-   # Edit .env with your Azure AI Project endpoint or connection string
+   # Edit .env with your Azure AI Project endpoint
    ```
 
-4. **Run the agent locally**
+3. **Run locally**
    ```bash
    python agent.py
    ```
 
    The AG-UI endpoint will be available at `http://localhost:8000/`
+
+   **Note**: In local mode, the agent runs on your machine but connects to Foundry for models and tools.
 
 ## Configuration
 
@@ -104,58 +159,123 @@ az login
 
 ```
 ag-ui-agent-mcp/
-├── agent.py              # Main agent implementation
-├── deploy.py             # Deployment script and validation
-├── Dockerfile            # Container configuration
+├── agent.yaml            # Agent definition for Foundry deployment
+├── azure.yaml            # Azure Developer CLI configuration
+├── infra/                # Infrastructure as Code (Bicep templates)
+│   ├── main.bicep        # Main infrastructure deployment
+│   └── foundry-project.bicep  # AI Foundry project resources
+├── agent.py              # Agent implementation (for local dev)
+├── deploy.py             # Deployment helper script
+├── Dockerfile            # Container image definition
 ├── requirements.txt      # Python dependencies
 ├── .env.example          # Environment configuration template
-└── README.md            # This file
+└── README.md             # This file
 ```
 
-## Agent Architecture
+## Deployment Architecture
 
-The agent is built with three key components:
+### Foundry Hosted Deployment (Recommended)
 
-### 1. MCP Tool Connection
-```python
-mcp_kb_tool = HostedMCPTool(
-    name="kb_kb_archive_f1nat",
-    description="Access to knowledge base containing project information",
-    url="https://aisearch-nv-eastus2-dev-01.search.windows.net/...",
-    approval_mode="never",  # No human-in-the-loop required
-)
+```
+Developer Machine
+       ↓
+    azd up
+       ↓
+┌──────────────────────────────────────────┐
+│  Azure AI Foundry (Managed Platform)     │
+│  ├─ Container Registry (agent image)     │
+│  ├─ Hosted Agent Service (runs agent)    │
+│  ├─ Auto-Scaling (1-10 instances)        │
+│  ├─ Load Balancing                       │
+│  ├─ AG-UI Endpoint (exposed)             │
+│  └─ Monitoring & Logs                    │
+└──────────────────────────────────────────┘
+       ↓
+Frontend/Clients → https://[foundry-endpoint]/agents/IntakeFormAssistant
 ```
 
-### 2. Agent Creation with Azure Provider
-```python
-async with AzureAIProjectAgentProvider() as provider:
-    agent = await provider.create_agent(
-        name="IntakeFormAssistant",
-        model="gpt-5-mini",
-        instructions="You are assisting users complete an intake form...",
-        tools=[mcp_kb_tool],
-    )
-```
+### Self-Hosted Development (Optional)
 
-### 3. AG-UI Endpoint Exposure
-```python
-app = FastAPI()
-add_agent_framework_fastapi_endpoint(app, agent, "/")
+```
+┌──────────────────────────────────┐
+│  Your Infrastructure             │
+│  ├─ Local/Container (agent.py)   │
+│  ├─ FastAPI (AG-UI endpoint)     │
+│  └─ You manage scaling/monitoring│
+└─────────────┬────────────────────┘
+              │ CONNECTION_STRING
+              ↓
+┌──────────────────────────────────┐
+│  Azure AI Project (Foundry)      │
+│  ├─ Models (GPT-5-mini, etc.)    │
+│  ├─ MCP Tools                    │
+│  └─ Enterprise Security          │
+└──────────────────────────────────┘
 ```
 
 ## Deployment
 
-### Option 1: Local Development
+### Option 1: Deploy to Foundry (Recommended for Production)
+
+Deploy as a fully managed agent on Azure AI Foundry:
+
 ```bash
-python agent.py
+# First time setup
+azd init
+
+# Deploy everything
+azd up
+
+# Check deployment status
+azd ai agent show
+
+# View logs
+azd monitor --logs
+
+# Update deployment
+azd deploy
 ```
 
+**What happens:**
+- ✅ Provisions Azure AI Foundry project
+- ✅ Builds and pushes Docker image
+- ✅ Deploys agent as hosted service
+- ✅ Configures auto-scaling (1-10 instances)
+- ✅ Sets up monitoring and logging
+- ✅ Exposes AG-UI endpoint
+
 ### Option 2: Validate Configuration
+
+Check deployment prerequisites:
+
 ```bash
 python deploy.py
 ```
 
-### Option 3: Docker Deployment
+This validates:
+- Azure CLI is installed
+- You're authenticated to Azure
+- Required files are present
+- Configuration is valid
+
+### Option 3: Local Development
+
+Run agent locally for development:
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run agent
+python agent.py
+```
+
+Agent will run at `http://localhost:8000/` and connect to Foundry for models.
+
+### Option 4: Docker (Self-Managed)
+
+For custom container deployments:
+
 ```bash
 # Build image
 docker build -t ag-ui-agent-mcp .
@@ -164,67 +284,42 @@ docker build -t ag-ui-agent-mcp .
 docker run -p 8000:8000 --env-file .env ag-ui-agent-mcp
 ```
 
-### Option 4: Azure Container Apps
-```bash
-# Login to Azure
-az login
-
-# Create resource group (if needed)
-az group create --name rg-ag-ui-agent --location eastus2
-
-# Create container registry (if needed)
-az acr create --resource-group rg-ag-ui-agent --name <your-registry> --sku Basic
-
-# Build and push image
-az acr build --registry <your-registry> --image ag-ui-agent-mcp:latest .
-
-# Deploy to Container Apps
-az containerapp create \
-  --name ag-ui-agent-mcp \
-  --resource-group rg-ag-ui-agent \
-  --image <your-registry>.azurecr.io/ag-ui-agent-mcp:latest \
-  --target-port 8000 \
-  --ingress external \
-  --env-vars PROJECT_ENDPOINT=<your-project-endpoint>
-  # Or use: AZURE_AI_PROJECT_CONNECTION_STRING=<your-connection-string> (legacy)
-```
-
-### Option 5: Azure App Service
-```bash
-# Create App Service plan
-az appservice plan create \
-  --name asp-ag-ui-agent \
-  --resource-group rg-ag-ui-agent \
-  --sku B1 \
-  --is-linux
-
-# Create Web App
-az webapp create \
-  --resource-group rg-ag-ui-agent \
-  --plan asp-ag-ui-agent \
-  --name <your-app-name> \
-  --deployment-container-image-name <your-registry>.azurecr.io/ag-ui-agent-mcp:latest
-
-# Configure environment variables
-az webapp config appsettings set \
-  --resource-group rg-ag-ui-agent \
-  --name <your-app-name> \
-  --settings PROJECT_ENDPOINT=<your-project-endpoint>
-  # Or use: AZURE_AI_PROJECT_CONNECTION_STRING=<your-connection-string> (legacy)
-```
+Deploy to Azure Container Apps or App Service as needed.
 
 ## Usage
 
-### Testing the AG-UI Endpoint
+### Testing the Deployed Agent
 
-Once running, you can test the endpoint:
+Once deployed to Foundry:
 
 ```bash
-# Health check (if implemented)
-curl http://localhost:8000/health
+# Get the agent endpoint from deployment
+azd ai agent show
 
-# AG-UI endpoint
-curl http://localhost:8000/
+# Test the AG-UI endpoint
+curl -X POST https://[foundry-endpoint]/agents/IntakeFormAssistant/chat \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "Help me with an intake form"}
+    ]
+  }'
+```
+
+### Testing Local Agent
+
+If running locally:
+
+```bash
+# Test the AG-UI endpoint
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'
 ```
 
 ### Frontend Integration
