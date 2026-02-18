@@ -53,7 +53,7 @@ This code **IS configured for Azure Foundry** via the `AzureAIProjectAgentProvid
 3. **Configure environment**
    ```bash
    cp .env.example .env
-   # Edit .env with your Azure AI Project connection string
+   # Edit .env with your Azure AI Project endpoint or connection string
    ```
 
 4. **Run the agent locally**
@@ -70,8 +70,12 @@ This code **IS configured for Azure Foundry** via the `AzureAIProjectAgentProvid
 Copy `.env.example` to `.env` and configure:
 
 ```bash
-# Required: Azure AI Project connection string from Foundry
-AZURE_AI_PROJECT_CONNECTION_STRING=<your-connection-string>
+# Required: Azure AI Project endpoint (recommended) or connection string
+PROJECT_ENDPOINT=<your-project-endpoint-url>
+# Example: https://your-project-name.region.inference.ai.azure.com
+
+# Alternative (legacy): Use connection string instead of endpoint
+# AZURE_AI_PROJECT_CONNECTION_STRING=<your-connection-string>
 
 # Optional: Agent configuration
 AGENT_MODEL=gpt-5-mini
@@ -181,7 +185,8 @@ az containerapp create \
   --image <your-registry>.azurecr.io/ag-ui-agent-mcp:latest \
   --target-port 8000 \
   --ingress external \
-  --env-vars AZURE_AI_PROJECT_CONNECTION_STRING=<your-connection-string>
+  --env-vars PROJECT_ENDPOINT=<your-project-endpoint>
+  # Or use: AZURE_AI_PROJECT_CONNECTION_STRING=<your-connection-string> (legacy)
 ```
 
 ### Option 5: Azure App Service
@@ -204,7 +209,8 @@ az webapp create \
 az webapp config appsettings set \
   --resource-group rg-ag-ui-agent \
   --name <your-app-name> \
-  --settings AZURE_AI_PROJECT_CONNECTION_STRING=<your-connection-string>
+  --settings PROJECT_ENDPOINT=<your-project-endpoint>
+  # Or use: AZURE_AI_PROJECT_CONNECTION_STRING=<your-connection-string> (legacy)
 ```
 
 ## Usage
@@ -282,7 +288,7 @@ definition:
 
 1. **Authentication Errors**
    - Ensure you're logged in: `az login`
-   - Verify your Azure AI Project connection string is correct
+   - Verify your Azure AI Project endpoint or connection string is correct
    - Check that your account has necessary permissions
 
 2. **MCP Connection Issues**
