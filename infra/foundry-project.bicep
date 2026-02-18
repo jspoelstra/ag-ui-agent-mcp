@@ -74,6 +74,8 @@ resource aiProject 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = i
 }
 
 // Reference to existing AI Project (if using existing)
+// Azure Resource ID format: /subscriptions/{sub}/resourceGroups/{rg}/providers/{provider}/workspaces/{name}
+// Index 8 in the split array is the workspace name
 resource existingAiProject 'Microsoft.MachineLearningServices/workspaces@2024-04-01' existing = if (useExistingProject) {
   name: useExistingProject ? split(existingProjectId, '/')[8] : 'placeholder'
   scope: resourceGroup()
