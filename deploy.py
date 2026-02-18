@@ -50,11 +50,9 @@ async def deploy_agent():
             if not endpoint:
                 print("\n❌ Error: Missing 'Endpoint' field in connection string")
                 print("Connection string should contain: Endpoint=https://...")
-                endpoint = None
         except Exception as e:
             print(f"\n❌ Error: Invalid connection string format: {e}")
             print("Expected format: ProjectId=...;Endpoint=https://...;...")
-            endpoint = None
     
     if not endpoint:
         print("\n❌ Error: PROJECT_ENDPOINT or AZURE_AI_PROJECT_CONNECTION_STRING not set")
