@@ -115,7 +115,7 @@ The `--reload` flag enables auto-reload during development.
 
 ## Testing the Agent
 
-### Using the Test Client
+### Using the Python Test Client (Quick Testing)
 
 ```bash
 # Run the test client
@@ -124,6 +124,29 @@ python test_client.py
 # Or test a remote endpoint
 python test_client.py https://your-agent.azurewebsites.net
 ```
+
+### Using the TypeScript Test Client (Comprehensive Testing)
+
+For comprehensive testing of Foundry-deployed agents, use the TypeScript test client:
+
+```bash
+# Navigate to test client directory
+cd ts-test-client
+
+# Install dependencies (first time only)
+npm install
+
+# Configure and run tests
+npm run dev -- https://your-agent-on-foundry.azurewebsites.net
+```
+
+The TypeScript client provides:
+- ✅ Multiple test scenarios (connectivity, chat, knowledge base, multi-turn, error handling)
+- ✅ Detailed test results and summaries
+- ✅ Easy configuration via .env or command-line arguments
+- ✅ TypeScript type safety and better error messages
+
+See [ts-test-client/README.md](./ts-test-client/README.md) for detailed documentation.
 
 ### Using curl
 
