@@ -1,10 +1,14 @@
 # Implementation Summary
 
+> **📖 Quick Explanation Needed?** See [AG_UI_AND_FOUNDRY_EXPLAINED.md](./AG_UI_AND_FOUNDRY_EXPLAINED.md) for detailed answers to:
+> - Why does the code use `add_agent_framework_fastapi_endpoint` for AG-UI?
+> - How is the agent deployed on Microsoft Foundry on Azure?
+
 ## Overview
 This repository provides a **complete, production-ready** example of creating an AI agent using Microsoft Agent Framework (MAF) that:
 - Connects to knowledge sources via MCP (Model Context Protocol)
-- Exposes an AG-UI endpoint for frontend integration
-- Deploys to Azure Foundry platform
+- Exposes an AG-UI endpoint for frontend integration (via `add_agent_framework_fastapi_endpoint`)
+- Deploys to Azure Foundry platform (via `AzureAIProjectAgentProvider`)
 
 ## What's Included
 
@@ -105,15 +109,17 @@ This repository provides a **complete, production-ready** example of creating an
 
 ### AG-UI Protocol
 - Standard AG-UI endpoint at root path (`/`)
+- Exposed via `add_agent_framework_fastapi_endpoint()` from agent-framework-ag-ui package
 - Compatible with CopilotKit and other AG-UI clients
 - Streaming support
 - Rich UI components
 
 ### Azure Foundry Deployment
-- Uses `AzureAIProjectAgentProvider`
-- Supports connection string authentication
-- Compatible with Azure Container Apps, App Service, AKS
-- Production-ready configuration
+- Uses `AzureAIProjectAgentProvider` to connect to Azure AI Project (Foundry)
+- Agent provisioned within Foundry infrastructure when agent.py runs
+- Supports connection string authentication via AZURE_AI_PROJECT_CONNECTION_STRING
+- Compatible with Azure Container Apps, App Service, AKS for hosting the FastAPI server
+- Production-ready configuration with managed models and enterprise security
 
 ## Agent Configuration Mapping
 
