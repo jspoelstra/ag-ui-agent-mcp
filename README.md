@@ -50,6 +50,12 @@ This code **HAS full AG-UI support** via the `agent-framework-ag-ui` package. Th
 
 ### Deployment to Foundry (Recommended)
 
+**Choose your deployment option:**
+- **New Project**: Creates a new AI Foundry project with all resources
+- **Existing Project**: Deploy agent to your existing AI Foundry project
+
+#### Option 1: Deploy with New Foundry Project
+
 1. **Clone the repository**
    ```bash
    git clone https://github.com/jspoelstra/ag-ui-agent-mcp.git
@@ -59,7 +65,7 @@ This code **HAS full AG-UI support** via the `agent-framework-ag-ui` package. Th
 2. **Configure environment**
    ```bash
    cp .env.example .env
-   # Edit .env with your configuration
+   # Edit .env with your configuration (default creates new project)
    ```
 
 3. **Login to Azure**
@@ -77,22 +83,53 @@ This code **HAS full AG-UI support** via the `agent-framework-ag-ui` package. Th
    ```
 
    This single command will:
-   - Provision Azure AI Foundry project
+   - Create new Azure AI Foundry project
+   - Provision Container Registry and OpenAI Service
    - Build and push Docker image
    - Deploy agent as a hosted service
    - Configure auto-scaling and monitoring
    - Expose AG-UI endpoint
 
-5. **View deployment**
+#### Option 2: Deploy to Existing Foundry Project
+
+If you already have an AI Foundry project:
+
+1. **Get your project information**
    ```bash
-   # Check agent status
-   azd ai agent show
-   
-   # View logs
-   azd monitor --logs
+   # Find your project resource ID
+   az ml workspace show --name <project-name> --resource-group <rg> --query id -o tsv
    ```
 
+2. **Configure for existing project**
+   ```bash
+   cp .env.example .env
+   # Edit .env and uncomment/set:
+   # USE_EXISTING_PROJECT=true
+   # EXISTING_PROJECT_ID=<your-project-id>
+   # EXISTING_RESOURCE_GROUP=<your-rg>
+   ```
+
+3. **Deploy**
+   ```bash
+   azd init
+   azd up
+   ```
+
+   This will deploy the agent to your existing project without creating new infrastructure.
+
+#### View Deployment
+
+```bash
+# Check agent status
+azd ai agent show
+
+# View logs
+azd monitor --logs
+```
+
 The AG-UI endpoint will be available at the Foundry-provided URL.
+
+See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed instructions.
 
 ### Local Development (Optional)
 

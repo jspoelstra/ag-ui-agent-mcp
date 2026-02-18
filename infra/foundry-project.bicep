@@ -1,5 +1,6 @@
 // Azure AI Foundry Project deployment with hosted agent
 // This template creates an AI Foundry project and deploys the hosted agent
+// Supports both creating new infrastructure and using existing Foundry projects
 
 @description('Name of the AI Project')
 param projectName string
@@ -25,8 +26,14 @@ param maxInstances int
 @description('Resource tags')
 param tags object
 
-// AI Hub (required for AI Foundry Project)
-resource aiHub 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
+@description('Use existing AI Foundry project instead of creating new one')
+param useExistingProject bool = false
+
+@description('Existing AI Project resource ID (required if useExistingProject is true)')
+param existingProjectId string = ''
+
+// AI Hub (required for AI Foundry Project) - only created if not using existing project
+resource aiHub 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = if (!useExistingProject) {
   name: 'aihub-${projectName}'
   location: location
   tags: tags
@@ -45,8 +52,8 @@ resource aiHub 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
   }
 }
 
-// AI Foundry Project
-resource aiProject 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
+// AI Foundry Project - created only if not using existing, referenced if using existing
+resource aiProject 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = if (!useExistingProject) {
   name: projectName
   location: location
   tags: tags
@@ -66,8 +73,17 @@ resource aiProject 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
   }
 }
 
-// Container Registry for hosting agent images
-resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+// Reference to existing AI Project (if using existing)
+resource existingAiProject 'Microsoft.MachineLearningServices/workspaces@2024-04-01' existing = if (useExistingProject) {
+  name: useExistingProject ? split(existingProjectId, '/')[8] : 'placeholder'
+  scope: resourceGroup()
+}
+
+// Determine which project to use for outputs
+var activeProject = useExistingProject ? existingAiProject : aiProject
+
+// Container Registry for hosting agent images - only created if not using existing project
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = if (!useExistingProject) {
   name: 'acr${uniqueString(resourceGroup().id)}'
   location: location
   tags: tags
@@ -79,8 +95,8 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
   }
 }
 
-// Azure OpenAI Service for model hosting
-resource openAiService 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
+// Azure OpenAI Service for model hosting - only created if not using existing project
+resource openAiService 'Microsoft.CognitiveServices/accounts@2023-05-01' = if (!useExistingProject) {
   name: 'openai-${projectName}'
   location: location
   tags: tags
@@ -94,8 +110,8 @@ resource openAiService 'Microsoft.CognitiveServices/accounts@2023-05-01' = {
   }
 }
 
-// Deploy the model
-resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = {
+// Deploy the model - only if creating new project
+resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-05-01' = if (!useExistingProject) {
   parent: openAiService
   name: agentModel
   sku: {
@@ -111,9 +127,9 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-
   }
 }
 
-// Application Insights for monitoring
+// Application Insights for monitoring - always created for the agent
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-${projectName}'
+  name: 'appi-${projectName}-${agentName}'
   location: location
   tags: tags
   kind: 'web'
@@ -124,9 +140,9 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-// Log Analytics Workspace
+// Log Analytics Workspace - always created for the agent
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
-  name: 'log-${projectName}'
+  name: 'log-${projectName}-${agentName}'
   location: location
   tags: tags
   properties: {
@@ -138,10 +154,10 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
 }
 
 // Outputs
-output projectEndpoint string = aiProject.properties.discoveryUrl
-output projectName string = aiProject.name
-output projectId string = aiProject.id
-output agentEndpoint string = 'https://${aiProject.name}.${location}.inference.ai.azure.com/agents/${agentName}'
-output containerRegistryName string = containerRegistry.name
-output openAiEndpoint string = openAiService.properties.endpoint
+output projectEndpoint string = activeProject.properties.discoveryUrl
+output projectName string = activeProject.name
+output projectId string = activeProject.id
+output agentEndpoint string = 'https://${activeProject.name}.${location}.inference.ai.azure.com/agents/${agentName}'
+output containerRegistryName string = useExistingProject ? 'using-existing' : containerRegistry.name
+output openAiEndpoint string = useExistingProject ? 'using-existing' : openAiService.properties.endpoint
 output appInsightsInstrumentationKey string = appInsights.properties.InstrumentationKey

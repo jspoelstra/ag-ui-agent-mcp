@@ -43,6 +43,12 @@ infra:
     aiProjectName: ${AZURE_AI_PROJECT_NAME}
     location: ${AZURE_LOCATION=eastus2}
     
+    # Optional: Use existing Foundry project instead of creating new one
+    # Set USE_EXISTING_PROJECT=true and provide EXISTING_PROJECT_ID and EXISTING_RESOURCE_GROUP
+    # useExistingProject: ${USE_EXISTING_PROJECT=false}
+    # existingProjectId: ${EXISTING_PROJECT_ID=}
+    # existingResourceGroupName: ${EXISTING_RESOURCE_GROUP=}
+    
     # Agent configuration
     agentName: IntakeFormAssistant
     agentModel: gpt-5-mini

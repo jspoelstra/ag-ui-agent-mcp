@@ -1,5 +1,6 @@
 // Main infrastructure deployment for Azure AI Foundry hosted agent
 // This template provisions the necessary Azure resources for hosting the agent on Foundry
+// Supports both creating new infrastructure and reusing existing Foundry projects
 
 targetScope = 'subscription'
 
@@ -27,8 +28,17 @@ param minInstances int = 1
 @description('Maximum number of instances for auto-scaling')
 param maxInstances int = 10
 
-@description('Resource group name')
+@description('Resource group name (for new deployments) or existing resource group name')
 param resourceGroupName string = 'rg-${aiProjectName}'
+
+@description('Use existing AI Foundry project instead of creating new one')
+param useExistingProject bool = false
+
+@description('Existing AI Project resource ID (required if useExistingProject is true)')
+param existingProjectId string = ''
+
+@description('Existing resource group name (required if useExistingProject is true)')
+param existingResourceGroupName string = ''
 
 @description('Tags to apply to all resources')
 param tags object = {
@@ -38,17 +48,25 @@ param tags object = {
   'protocol': 'ag-ui'
 }
 
-// Resource group
-resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
+// Determine which resource group to use
+var targetResourceGroupName = useExistingProject ? existingResourceGroupName : resourceGroupName
+
+// Resource group (only created if not using existing project)
+resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = if (!useExistingProject) {
   name: resourceGroupName
   location: location
   tags: tags
 }
 
+// Reference to existing resource group (if using existing project)
+resource existingRg 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (useExistingProject) {
+  name: existingResourceGroupName
+}
+
 // Deploy the AI Foundry project and agent resources
 module foundryProject './foundry-project.bicep' = {
   name: 'foundry-project-deployment'
-  scope: rg
+  scope: useExistingProject ? existingRg : rg
   params: {
     projectName: aiProjectName
     location: location
@@ -58,6 +76,8 @@ module foundryProject './foundry-project.bicep' = {
     minInstances: minInstances
     maxInstances: maxInstances
     tags: tags
+    useExistingProject: useExistingProject
+    existingProjectId: existingProjectId
   }
 }
 
@@ -65,4 +85,5 @@ module foundryProject './foundry-project.bicep' = {
 output AZURE_AI_PROJECT_ENDPOINT string = foundryProject.outputs.projectEndpoint
 output AZURE_AI_PROJECT_NAME string = foundryProject.outputs.projectName
 output AGENT_ENDPOINT string = foundryProject.outputs.agentEndpoint
-output RESOURCE_GROUP_NAME string = rg.name
+output RESOURCE_GROUP_NAME string = targetResourceGroupName
+output DEPLOYMENT_MODE string = useExistingProject ? 'existing-project' : 'new-project'

@@ -55,7 +55,13 @@ With Foundry v2 hosted agents, your agent runs on Foundry's managed infrastructu
 
 ## Step-by-Step Deployment
 
-### 1. Clone and Configure
+You have two deployment options:
+- **Option A**: Create a new AI Foundry project (recommended for new deployments)
+- **Option B**: Use an existing AI Foundry project (if you already have one)
+
+### Option A: Deploy with New Foundry Project
+
+#### 1. Clone and Configure
 
 ```bash
 # Clone the repository
@@ -67,13 +73,13 @@ cp .env.example .env
 
 # Edit .env with your configuration
 # Required variables:
-# - AZURE_AI_PROJECT_NAME=<your-project-name>
+# - AZURE_AI_PROJECT_NAME=<your-project-name>  # Will be created
 # - AZURE_LOCATION=<azure-region>  # e.g., eastus2
 # - AGENT_MODEL=gpt-5-mini
 # - MCP_SERVER_URL=<your-mcp-server-url>
 ```
 
-### 2. Authenticate to Azure
+#### 2. Authenticate to Azure
 
 ```bash
 # Login to Azure
@@ -86,7 +92,7 @@ az account set --subscription <subscription-id>
 az account show
 ```
 
-### 3. Initialize Deployment
+#### 3. Initialize Deployment
 
 ```bash
 # Initialize azd for this project
@@ -98,14 +104,14 @@ azd init
 # - Location: Select Azure region (e.g., "eastus2")
 ```
 
-### 4. Deploy to Foundry
+#### 4. Deploy to Foundry
 
 ```bash
 # Deploy everything with a single command
 azd up
 
 # This will:
-# 1. Provision Azure AI Foundry project
+# 1. Create new Azure AI Foundry project
 # 2. Create Azure Container Registry
 # 3. Deploy Azure OpenAI Service
 # 4. Set up Application Insights
@@ -114,6 +120,69 @@ azd up
 # 7. Configure auto-scaling
 # 8. Expose AG-UI endpoint
 ```
+
+### Option B: Deploy with Existing Foundry Project
+
+If you already have an AI Foundry project and want to deploy the agent to it:
+
+#### 1. Get Your Existing Project Information
+
+```bash
+# Find your existing project resource ID
+az ml workspace show \
+  --name <your-existing-project-name> \
+  --resource-group <your-resource-group> \
+  --query id -o tsv
+
+# Example output:
+# /subscriptions/abc-123/resourceGroups/rg-foundry/providers/Microsoft.MachineLearningServices/workspaces/my-ai-project
+```
+
+#### 2. Configure for Existing Project
+
+```bash
+# Clone the repository
+git clone https://github.com/jspoelstra/ag-ui-agent-mcp.git
+cd ag-ui-agent-mcp
+
+# Create environment file
+cp .env.example .env
+
+# Edit .env and uncomment/set these variables:
+# USE_EXISTING_PROJECT=true
+# EXISTING_PROJECT_ID=/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.MachineLearningServices/workspaces/<project-name>
+# EXISTING_RESOURCE_GROUP=<your-resource-group-name>
+# AZURE_AI_PROJECT_NAME=<your-existing-project-name>
+# AGENT_MODEL=gpt-5-mini
+# MCP_SERVER_URL=<your-mcp-server-url>
+```
+
+#### 3. Deploy Agent to Existing Project
+
+```bash
+# Login to Azure
+az login
+
+# Initialize azd
+azd init
+
+# Deploy (will use existing project)
+azd up
+
+# This will:
+# 1. Use your existing AI Foundry project
+# 2. Create Application Insights for the agent
+# 3. Build and push Docker image (to existing or new Container Registry)
+# 4. Deploy agent as hosted service
+# 5. Configure auto-scaling
+# 6. Expose AG-UI endpoint
+```
+
+**Note**: When using an existing project, the deployment will:
+- ✅ Reuse existing AI Hub and AI Project
+- ✅ Reuse existing Azure OpenAI deployments and models
+- ✅ Create new Application Insights and Log Analytics for the agent
+- ✅ Use existing Container Registry (if available) or create a new one
 
 ### 5. Verify Deployment
 
