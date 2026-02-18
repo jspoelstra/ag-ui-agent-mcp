@@ -47,8 +47,13 @@ async def deploy_agent():
         try:
             parts = dict(item.split("=", 1) for item in connection_string.split(";") if item and "=" in item)
             endpoint = parts.get("Endpoint")
+            if not endpoint:
+                print("\n❌ Error: Missing 'Endpoint' field in connection string")
+                print("Connection string should contain: Endpoint=https://...")
+                endpoint = None
         except Exception as e:
-            print(f"\n❌ Error: Could not parse connection string: {e}")
+            print(f"\n❌ Error: Invalid connection string format: {e}")
+            print("Expected format: ProjectId=...;Endpoint=https://...;...")
             endpoint = None
     
     if not endpoint:
