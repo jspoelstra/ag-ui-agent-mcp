@@ -36,13 +36,28 @@ async def deploy_agent():
     print("=" * 70)
     
     # Get Azure configuration from environment
+    # Support both modern endpoint format and legacy connection string
+    endpoint = os.getenv("PROJECT_ENDPOINT")
     connection_string = os.getenv("AZURE_AI_PROJECT_CONNECTION_STRING")
     
-    if not connection_string:
-        print("\n❌ Error: AZURE_AI_PROJECT_CONNECTION_STRING not set")
-        print("\nPlease set your Azure AI Project connection string:")
+    # If endpoint is not set, try to parse it from connection string
+    if not endpoint and connection_string:
+        # Parse connection string to extract endpoint
+        # Format: "ProjectId=<UUID>;Location=<region>;Endpoint=https://<something>.azure.com;..."
+        try:
+            parts = dict(item.split("=", 1) for item in connection_string.split(";") if item and "=" in item)
+            endpoint = parts.get("Endpoint")
+        except Exception as e:
+            print(f"\n❌ Error: Could not parse connection string: {e}")
+            endpoint = None
+    
+    if not endpoint:
+        print("\n❌ Error: PROJECT_ENDPOINT or AZURE_AI_PROJECT_CONNECTION_STRING not set")
+        print("\nPlease set your Azure AI Project endpoint:")
         print("1. Copy .env.example to .env")
-        print("2. Fill in your Azure AI Project connection string")
+        print("2. Set PROJECT_ENDPOINT to your Azure AI Project endpoint URL")
+        print("   Example: https://your-project.region.inference.ai.azure.com")
+        print("   OR set AZURE_AI_PROJECT_CONNECTION_STRING (legacy format)")
         print("3. Run this script again")
         sys.exit(1)
     
@@ -51,9 +66,9 @@ async def deploy_agent():
         credential = DefaultAzureCredential()
         print("✓ Azure authentication configured")
         
-        # Create AI Project client
-        client = AIProjectClient.from_connection_string(
-            conn_str=connection_string,
+        # Create AI Project client with endpoint
+        client = AIProjectClient(
+            endpoint=endpoint,
             credential=credential
         )
         print("✓ Connected to Azure AI Project")
