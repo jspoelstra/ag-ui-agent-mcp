@@ -5,3 +5,4 @@ azure-ai-projects
 azure-identity
 uvicorn
 python-dotenv
+requests
