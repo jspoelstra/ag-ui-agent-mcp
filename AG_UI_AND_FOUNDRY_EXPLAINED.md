@@ -1,9 +1,43 @@
 # AG-UI Support and Azure Foundry Deployment - Explained
 
-This document addresses two key questions about this implementation:
+This document addresses key questions about this implementation:
 
 1. **Why does the code use `add_agent_framework_fastapi_endpoint` instead of direct AG-UI support?**
 2. **How is the agent deployed on Microsoft Foundry on Azure?**
+3. **What is the difference between Foundry v2 hosted agents and self-hosted deployment?**
+
+## Important: Foundry v2 Hosted Agent Deployment
+
+**This repository has been updated to use Foundry v2 hosted agent deployment.**
+
+### What Changed?
+
+**BEFORE (Legacy Self-Hosted):**
+- Agent runs locally via `python agent.py`
+- Or containerized and deployed to Azure Container Apps/App Service
+- You manage the infrastructure, scaling, and monitoring
+- AzureAIProjectAgentProvider connects to Foundry for models/tools only
+
+**NOW (Foundry v2 Hosted):**
+- Agent is deployed directly to Foundry's managed infrastructure
+- Use `azd up` to deploy everything
+- Foundry handles infrastructure, scaling, monitoring, and lifecycle
+- No need to run locally or manage containers yourself
+
+### How to Deploy as Hosted Agent
+
+```bash
+# 1. Initialize deployment (first time only)
+azd init
+
+# 2. Deploy to Foundry
+azd up
+
+# 3. View agent status
+azd ai agent show
+```
+
+See the deployment sections below for details.
 
 ## 1. AG-UI Support - Why `add_agent_framework_fastapi_endpoint`?
 
@@ -111,22 +145,122 @@ The response will be in AG-UI protocol format, compatible with CopilotKit and ot
 
 ---
 
-## 2. Azure Foundry Deployment - How Is It Deployed?
+## 2. Azure Foundry Deployment - Hosted vs Self-Hosted
 
 ### Short Answer
-**The code IS configured for Azure Foundry deployment via `AzureAIProjectAgentProvider`**. When you use this provider, your agent runs within the Azure AI Project (Foundry) infrastructure.
+This repository supports **two deployment modes**:
+
+1. **Foundry v2 Hosted Agent (Recommended)**: Agent runs on Foundry's managed infrastructure
+2. **Self-Hosted with Foundry Connection (Legacy)**: Agent runs locally/in containers but connects to Foundry
 
 ### Detailed Explanation
 
-Azure Foundry deployment happens through the `AzureAIProjectAgentProvider` class:
+#### Foundry v2 Hosted Agent Deployment (Recommended)
 
-#### Code Breakdown (from agent.py):
+With Foundry v2, you can deploy agents directly to Foundry's managed infrastructure:
+
+**How It Works:**
+```bash
+# Deploy using Azure Developer CLI
+azd up
+```
+
+**What happens:**
+1. **Infrastructure Provisioning**: Bicep templates create Azure AI Foundry project
+2. **Container Build**: Your agent is built as a Docker image
+3. **Hosted Deployment**: Foundry deploys and manages your agent
+4. **Auto-Scaling**: Foundry handles scaling based on demand
+5. **Monitoring**: Integrated Application Insights and logging
+6. **AG-UI Endpoint**: Automatically exposed and managed
+
+**Files for Hosted Deployment:**
+- `agent.yaml` - Agent definition and configuration
+- `azure.yaml` - azd deployment configuration
+- `infra/` - Bicep templates for Azure resources
+- `Dockerfile` - Container image definition
+
+**Benefits:**
+✅ **Fully Managed**: Foundry handles infrastructure, scaling, updates
+✅ **Enterprise-Ready**: Built-in security, compliance, governance
+✅ **Cost-Effective**: Pay only for what you use, auto-scaling
+✅ **Integrated**: Seamless Azure ecosystem integration
+✅ **Simple Deployment**: One command (`azd up`) to deploy
+✅ **No Infrastructure Management**: Focus on agent logic, not ops
+
+**Deployment Architecture:**
+```
+Developer Machine
+       ↓
+    azd up
+       ↓
+┌──────────────────────────────────────────┐
+│  Azure AI Foundry (Managed Platform)     │
+│  ├─ Container Registry (agent image)     │
+│  ├─ Hosted Agent Service (runs agent)    │
+│  ├─ Auto-Scaling (1-10 instances)        │
+│  ├─ Load Balancing                       │
+│  ├─ AG-UI Endpoint (exposed)             │
+│  └─ Monitoring & Logs                    │
+└──────────────────────────────────────────┘
+       ↓
+Frontend/Clients → https://[foundry-endpoint]/agents/IntakeFormAssistant
+```
+
+#### Self-Hosted with Foundry Connection (Legacy)
+
+The legacy approach where you manage the infrastructure but connect to Foundry:
+
+**How It Works:**
+```python
+# In agent.py
+async with AzureAIProjectAgentProvider() as provider:
+    agent = await provider.create_agent(...)
+
+# Run locally
+python agent.py
+
+# Or containerize and deploy to Azure Container Apps
+docker build -t agent .
+az containerapp create ...
+```
+
+**What happens:**
+1. **Agent Runs Locally**: FastAPI server runs on your machine/container
+2. **Connects to Foundry**: Uses AzureAIProjectAgentProvider for models
+3. **You Manage Infrastructure**: You handle scaling, monitoring, deployment
+4. **AG-UI Endpoint**: Exposed via FastAPI on your infrastructure
+
+**When to Use:**
+- Development and testing
+- Custom infrastructure requirements
+- Specific networking constraints
+- Gradual migration to hosted agents
+
+**Architecture:**
+```
+┌──────────────────────────────────┐
+│  Your Infrastructure             │
+│  ├─ Container/VM (your agent)    │
+│  ├─ FastAPI (AG-UI endpoint)     │
+│  └─ You manage scaling/monitoring│
+└─────────────┬────────────────────┘
+              │ AZURE_AI_PROJECT_CONNECTION_STRING
+              ↓
+┌──────────────────────────────────┐
+│  Azure AI Project (Foundry)      │
+│  ├─ Models (GPT-5-mini, etc.)    │
+│  ├─ MCP Tools                    │
+│  └─ Enterprise Security          │
+└──────────────────────────────────┘
+```
+
+#### Code Breakdown (Self-Hosted agent.py):
 
 ```python
-# Line 20: Import the Azure Foundry provider
+# Line 20: Import the Azure Foundry provider (for self-hosted mode)
 from agent_framework.azure import AzureAIProjectAgentProvider
 
-# Lines 48-58: Create agent using Foundry provider
+# Lines 48-58: Create agent using Foundry provider (connects to Foundry for models)
 async with AzureAIProjectAgentProvider() as provider:
     agent = await provider.create_agent(
         name="IntakeFormAssistant",
@@ -136,7 +270,9 @@ async with AzureAIProjectAgentProvider() as provider:
     )
 ```
 
-#### What `AzureAIProjectAgentProvider` Does:
+**Note**: For hosted deployment, the agent.yaml file defines the agent configuration instead.
+
+#### What `AzureAIProjectAgentProvider` Does (Self-Hosted Mode):
 
 1. **Connects to Azure AI Project (Foundry)**
    - Uses `AZURE_AI_PROJECT_CONNECTION_STRING` from environment
@@ -144,7 +280,6 @@ async with AzureAIProjectAgentProvider() as provider:
    - Establishes connection to your Foundry project
 
 2. **Provisions Agent Resources**
-   - Creates the agent in Foundry infrastructure
    - Configures the specified model (gpt-5-mini, gpt-4, etc.)
    - Sets up the agent's tools and capabilities
    - Links to project resources (MCP connections, knowledge bases, etc.)
@@ -155,167 +290,100 @@ async with AzureAIProjectAgentProvider() as provider:
    - Coordinates with Azure services
    - Provides monitoring and logging integration
 
-#### Azure Foundry Architecture:
+---
 
-```
-┌────────────────────────────────────────────────────────┐
-│  Your Application (agent.py)                           │
-│  ├─ Uses AzureAIProjectAgentProvider                   │
-│  └─ Exposes AG-UI endpoint via FastAPI                 │
-└─────────────────────┬──────────────────────────────────┘
-                      │ AZURE_AI_PROJECT_CONNECTION_STRING
-                      │ DefaultAzureCredential
-                      ↓
-┌────────────────────────────────────────────────────────┐
-│  Azure AI Project (Foundry)                            │
-│  ├─ Agent Configuration & Management                   │
-│  ├─ Model Deployments (gpt-5-mini, etc.)              │
-│  ├─ Tool Connections (MCP, Functions)                 │
-│  └─ Security & Compliance                              │
-└─────────────────────┬──────────────────────────────────┘
-                      │
-        ┌─────────────┼─────────────┐
-        ↓             ↓             ↓
-┌─────────────┐ ┌──────────┐ ┌─────────────┐
-│ Azure       │ │ MCP      │ │ Other       │
-│ OpenAI      │ │ Tools    │ │ Resources   │
-│ Service     │ │ (KB, etc)│ │             │
-└─────────────┘ └──────────┘ └─────────────┘
-```
+## 3. Comparison: Hosted vs Self-Hosted
 
-#### Deployment Scenarios:
-
-**Scenario 1: Local Development with Foundry Connection**
-```bash
-# Your machine
-python agent.py  # Runs locally but connects to Foundry
-
-# What happens:
-# - FastAPI server runs on localhost:8000
-# - Agent connects to Azure AI Project
-# - Model calls go through Azure OpenAI
-# - MCP tools access Azure resources
-```
-
-**Scenario 2: Containerized Deployment**
-```bash
-# Deploy to Azure Container Apps
-docker build -t ag-ui-agent-mcp .
-# Container runs in Azure, connects to Foundry
-
-# What happens:
-# - Container runs in Azure infrastructure
-# - Uses Managed Identity for auth
-# - Agent connects to same Foundry project
-# - Benefits from Azure networking, security
-```
-
-**Scenario 3: Full Foundry Deployment**
-```bash
-# Using Azure AI Studio / Foundry UI
-# - Upload agent configuration
-# - Foundry provisions compute
-# - Foundry manages deployment lifecycle
-
-# What happens:
-# - Everything runs within Foundry
-# - Fully managed by Azure
-# - Integrated monitoring and logging
-```
-
-#### Why This Matters - Foundry Benefits:
-
-Using `AzureAIProjectAgentProvider` gives you:
-
-✅ **Enterprise Security**: Azure AD integration, RBAC, compliance
-✅ **Managed Models**: No need to manage OpenAI API keys or quotas
-✅ **Resource Sharing**: Share MCP connections, knowledge bases across agents
-✅ **Monitoring**: Built-in Application Insights, logging
-✅ **Scalability**: Azure handles scaling based on demand
-✅ **Cost Management**: Centralized billing and cost tracking
-✅ **Governance**: Policy enforcement, audit trails
-
-#### Setting Up Foundry Connection:
-
-1. **Get Connection String** (from Azure Portal):
-   ```
-   endpoint=https://your-project.azure.com;key=YOUR_KEY
-   ```
-
-2. **Set Environment Variable**:
-   ```bash
-   # In .env file
-   AZURE_AI_PROJECT_CONNECTION_STRING=endpoint=https://...;key=...
-   ```
-
-3. **Authenticate** (for local dev):
-   ```bash
-   az login
-   ```
-
-4. **Run Agent**:
-   ```bash
-   python agent.py
-   ```
-   Now your agent is connected to Foundry!
-
-#### Verification:
-
-You can verify Foundry connection by:
-
-```bash
-# Run the deployment validation script
-python deploy.py
-
-# It will check:
-# ✓ Azure authentication configured
-# ✓ Connected to Azure AI Project
-# ✓ Model configuration valid
-# ✓ MCP server accessible
-```
+| Feature | Foundry v2 Hosted | Self-Hosted with Foundry |
+|---------|-------------------|--------------------------|
+| **Infrastructure** | Managed by Foundry | You manage containers/VMs |
+| **Deployment** | `azd up` | `python agent.py` or Docker |
+| **Scaling** | Auto-scaling by Foundry | You configure scaling |
+| **Monitoring** | Built-in Application Insights | You set up monitoring |
+| **Cost** | Pay-per-use, auto-scale | Always-on or manual scaling |
+| **Maintenance** | Foundry updates automatically | You apply updates |
+| **Security** | Enterprise-grade built-in | You configure security |
+| **AG-UI Endpoint** | Auto-exposed by Foundry | You expose via FastAPI |
+| **Best For** | Production, enterprise | Development, custom needs |
 
 ---
 
-## Summary
+## 4. Migration Path
+
+### From Self-Hosted to Hosted Agent
+
+If you have an existing self-hosted agent, here's how to migrate:
+
+1. **Create agent.yaml** - Define your agent configuration
+2. **Create azure.yaml** - Set up azd deployment
+3. **Create infra/** - Add Bicep templates
+4. **Deploy**: Run `azd up`
+5. **Update clients** - Point to new Foundry endpoint
+6. **Decommission old infrastructure** - Remove self-hosted resources
+
+The agent logic remains the same; only the deployment method changes.
+
+---
+---
+
+## 5. Summary
 
 ### AG-UI Support ✅
 **Yes, this code has full AG-UI support** via the `agent-framework-ag-ui` package. The `add_agent_framework_fastapi_endpoint()` function is the official way to expose AG-UI endpoints.
 
-### Azure Foundry Deployment ✅
-**Yes, this code is configured for Azure Foundry** via the `AzureAIProjectAgentProvider`. This provider connects your agent to Azure AI Project infrastructure, enabling enterprise-grade deployment.
+### Azure Foundry Deployment ✅  
+**This repository now supports Foundry v2 hosted agent deployment**. Deploy using `azd up` to have your agent fully managed by Azure AI Foundry.
 
-### The Complete Picture
+### Deployment Options
 
-```python
-# 1. AG-UI Integration (Line 18)
-from agent_framework.ag_ui import add_agent_framework_fastapi_endpoint
-# ↑ This IS the AG-UI support from agent-framework-ag-ui package
+**Option 1: Foundry v2 Hosted (Recommended for Production)**
+```bash
+azd up  # Deploy to Foundry's managed infrastructure
+```
+- Agent runs on Foundry's managed infrastructure
+- Fully managed scaling, monitoring, updates
+- Enterprise-grade security and compliance
+- Simple one-command deployment
 
-# 2. Azure Foundry Integration (Line 20)
-from agent_framework.azure import AzureAIProjectAgentProvider
-# ↑ This IS the Foundry deployment connection
+**Option 2: Self-Hosted (Development/Custom Needs)**
+```bash
+python agent.py  # Run locally with Foundry connection
+```
+- Agent runs on your infrastructure
+- Connects to Foundry for models and tools
+- You manage deployment and scaling
+- Good for development and testing
 
-# 3. Create agent on Foundry (Lines 48-58)
-async with AzureAIProjectAgentProvider() as provider:
-    agent = await provider.create_agent(...)
-# ↑ Agent is now provisioned in Azure AI Project (Foundry)
+### The Complete Picture (Hosted Agent)
 
-# 4. Expose via AG-UI (Line 79)
-add_agent_framework_fastapi_endpoint(app, agent, "/")
-# ↑ FastAPI now serves AG-UI protocol endpoints
+```
+1. Define agent in agent.yaml
+   ↓
+2. Configure deployment in azure.yaml
+   ↓
+3. Run: azd up
+   ↓
+4. Foundry provisions and deploys agent
+   ↓
+5. AG-UI endpoint automatically exposed
+   ↓
+6. Frontend connects to Foundry endpoint
 ```
 
 **Result**: You have an agent that:
-- ✅ Runs on Azure Foundry infrastructure (`AzureAIProjectAgentProvider`)
-- ✅ Exposes AG-UI protocol endpoints (`add_agent_framework_fastapi_endpoint`)
-- ✅ Connects to MCP tools (`HostedMCPTool`)
-- ✅ Can be deployed anywhere (local, Container Apps, App Service, etc.)
+- ✅ Runs on Foundry's managed infrastructure
+- ✅ Exposes AG-UI protocol endpoints  
+- ✅ Connects to MCP tools
+- ✅ Auto-scales based on demand
+- ✅ Includes enterprise security and monitoring
 
 ---
 
 ## Further Reading
 
-- **Microsoft Agent Framework**: https://learn.microsoft.com/en-us/agent-framework/
-- **AG-UI Protocol Specification**: https://learn.microsoft.com/en-us/agent-framework/integrations/ag-ui/
-- **Azure AI Project (Foundry)**: https://learn.microsoft.com/en-us/azure/ai-studio/
+- **Microsoft Agent Framework**: https://learn.microsoft.com/agent-framework/
+- **AG-UI Protocol**: https://learn.microsoft.com/agent-framework/integrations/ag-ui/
+- **Azure AI Foundry**: https://learn.microsoft.com/azure/ai-studio/
+- **Hosted Agents**: https://learn.microsoft.com/azure/ai-foundry/agents/concepts/hosted-agents
+- **Azure Developer CLI**: https://learn.microsoft.com/azure/developer/azure-developer-cli/
 - **MCP Tools**: https://modelcontextprotocol.io/

@@ -1,0 +1,78 @@
+# Azure Developer CLI (azd) configuration for Foundry hosted agent deployment
+# This file defines the deployment configuration for the agent to Azure AI Foundry
+# For more information, see: https://learn.microsoft.com/azure/developer/azure-developer-cli
+
+name: ag-ui-agent-mcp
+metadata:
+  template: ag-ui-agent-mcp@0.0.1
+
+# Deployment configuration
+services:
+  agent:
+    # Language and framework
+    language: python
+    host: foundry
+    
+    # Agent definition file
+    definition: agent.yaml
+    
+    # Source code location
+    project: .
+    
+    # Docker configuration for hosted agent
+    docker:
+      path: Dockerfile
+      context: .
+    
+    # Environment variables
+    env:
+      AGENT_MODEL:
+        value: gpt-5-mini
+      LOG_LEVEL:
+        value: INFO
+
+# Infrastructure as Code
+infra:
+  # Use Bicep templates in the infra directory
+  provider: bicep
+  path: infra
+  
+  # Deployment parameters
+  parameters:
+    # AI Foundry project settings
+    aiProjectName: ${AZURE_AI_PROJECT_NAME}
+    location: ${AZURE_LOCATION=eastus2}
+    
+    # Optional: Use existing Foundry project instead of creating new one
+    # Set USE_EXISTING_PROJECT=true and provide EXISTING_PROJECT_ID and EXISTING_RESOURCE_GROUP
+    # useExistingProject: ${USE_EXISTING_PROJECT=false}
+    # existingProjectId: ${EXISTING_PROJECT_ID=}
+    # existingResourceGroupName: ${EXISTING_RESOURCE_GROUP=}
+    
+    # Agent configuration
+    agentName: IntakeFormAssistant
+    agentModel: gpt-5-mini
+    
+    # MCP configuration
+    mcpServerUrl: ${MCP_SERVER_URL}
+    
+    # Scaling configuration
+    minInstances: 1
+    maxInstances: 10
+
+# Deployment hooks
+hooks:
+  # Pre-deployment validation
+  predeploy:
+    shell: sh
+    run: |
+      echo "Validating Azure authentication..."
+      az account show > /dev/null 2>&1 || (echo "Please run 'az login' first" && exit 1)
+      echo "Validation complete."
+      
+  # Post-deployment testing
+  postdeploy:
+    shell: sh
+    run: |
+      echo "Deployment complete! Agent is now hosted on Azure AI Foundry."
+      echo "Run 'azd ai agent show' to view agent details."
