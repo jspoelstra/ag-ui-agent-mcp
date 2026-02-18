@@ -2,6 +2,8 @@
 
 A complete example of creating an agent using Microsoft Agent Framework (MAF), with access to MCP (Model Context Protocol) tools, deployed on Foundry (Azure), that exposes the AG-UI protocol.
 
+> **📖 New to this implementation?** See [AG_UI_AND_FOUNDRY_EXPLAINED.md](./AG_UI_AND_FOUNDRY_EXPLAINED.md) for detailed explanations of how AG-UI support and Azure Foundry deployment work in this code.
+
 ## Overview
 
 This repository demonstrates:
@@ -10,6 +12,14 @@ This repository demonstrates:
 - ✅ **AG-UI Endpoint**: Exposing the agent via AG-UI protocol for frontend integration
 - ✅ **Azure Deployment**: Deploying to Azure Foundry platform
 - ✅ **Production Ready**: Complete with Docker support and deployment scripts
+
+## Key Concepts
+
+### AG-UI Support
+This code **HAS full AG-UI support** via the `agent-framework-ag-ui` package. The function `add_agent_framework_fastapi_endpoint()` IS how AG-UI protocol endpoints are exposed in the Microsoft Agent Framework. See [detailed explanation](./AG_UI_AND_FOUNDRY_EXPLAINED.md#1-ag-ui-support---why-add_agent_framework_fastapi_endpoint).
+
+### Azure Foundry Deployment  
+This code **IS configured for Azure Foundry** via the `AzureAIProjectAgentProvider`. When you use this provider, your agent runs within Azure AI Project infrastructure. See [detailed explanation](./AG_UI_AND_FOUNDRY_EXPLAINED.md#2-azure-foundry-deployment---how-is-it-deployed).
 
 ## Features
 

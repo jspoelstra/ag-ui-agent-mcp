@@ -8,6 +8,22 @@ This script creates an agent with the following capabilities:
 - Exposes AG-UI protocol endpoint for frontend integration
 - Deploys on Azure Foundry platform
 - Uses GPT-5-mini model for agent reasoning
+
+KEY CONCEPTS EXPLAINED:
+
+1. AG-UI SUPPORT:
+   - This code HAS AG-UI support via the agent-framework-ag-ui package
+   - The function add_agent_framework_fastapi_endpoint() IS how AG-UI is exposed
+   - It's not a separate integration - this function adds AG-UI protocol endpoints to FastAPI
+   - Frontend clients (CopilotKit, etc.) can connect via the AG-UI protocol
+
+2. AZURE FOUNDRY DEPLOYMENT:
+   - This code IS configured for Azure Foundry via AzureAIProjectAgentProvider
+   - When you use this provider, your agent runs within Azure AI Project infrastructure
+   - The AZURE_AI_PROJECT_CONNECTION_STRING connects to your Foundry project
+   - Benefits: managed models, enterprise security, integrated monitoring, scalability
+
+See AG_UI_AND_FOUNDRY_EXPLAINED.md for detailed explanations.
 """
 
 import asyncio
@@ -15,8 +31,15 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from agent_framework import Agent
+
+# AG-UI Support: This import from agent-framework-ag-ui package provides the
+# add_agent_framework_fastapi_endpoint() function which IS how AG-UI protocol
+# endpoints are exposed in the Microsoft Agent Framework
 from agent_framework.ag_ui import add_agent_framework_fastapi_endpoint
 from agent_framework.ag_ui.tools import HostedMCPTool
+
+# Azure Foundry Deployment: This provider connects your agent to Azure AI Project
+# (Foundry) infrastructure, enabling enterprise-grade managed deployment
 from agent_framework.azure import AzureAIProjectAgentProvider
 
 # Load environment variables
@@ -44,7 +67,11 @@ async def create_agent_with_mcp() -> Agent:
     )
     
     # Create agent using Azure AI Project provider
-    # This connects to Foundry on Azure
+    # AZURE FOUNDRY DEPLOYMENT: This is where the agent is deployed to Foundry!
+    # - AzureAIProjectAgentProvider connects to Azure AI Project (Foundry)
+    # - Uses AZURE_AI_PROJECT_CONNECTION_STRING for authentication
+    # - The agent is provisioned within Foundry infrastructure
+    # - Benefits: managed models, enterprise security, scalability, monitoring
     async with AzureAIProjectAgentProvider() as provider:
         agent = await provider.create_agent(
             name="IntakeFormAssistant",
@@ -75,7 +102,14 @@ def create_fastapi_app(agent: Agent) -> FastAPI:
     )
     
     # Add AG-UI endpoint at root path
-    # This exposes the agent via AG-UI protocol for frontend integration
+    # AG-UI SUPPORT: This function from agent-framework-ag-ui package exposes
+    # the AG-UI protocol endpoints, enabling frontend integration with:
+    # - CopilotKit and other AG-UI clients
+    # - Streaming responses via server-sent events
+    # - Tool execution transparency
+    # - Rich UI components support
+    # This IS the AG-UI integration - add_agent_framework_fastapi_endpoint()
+    # is the official way to expose AG-UI endpoints in the Microsoft Agent Framework
     add_agent_framework_fastapi_endpoint(app, agent, "/")
     
     return app
