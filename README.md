@@ -102,6 +102,13 @@ az login
 ag-ui-agent-mcp/
 ├── agent.py              # Main agent implementation
 ├── deploy.py             # Deployment script and validation
+├── test_client.py        # Python test client for AG-UI endpoint
+├── ts-test-client/       # TypeScript test client for Foundry deployments
+│   ├── src/
+│   │   └── index.ts      # Main test client implementation
+│   ├── package.json      # Node.js dependencies
+│   ├── tsconfig.json     # TypeScript configuration
+│   └── README.md         # Test client documentation
 ├── Dockerfile            # Container configuration
 ├── requirements.txt      # Python dependencies
 ├── .env.example          # Environment configuration template
@@ -211,14 +218,56 @@ az webapp config appsettings set \
 
 ### Testing the AG-UI Endpoint
 
-Once running, you can test the endpoint:
+#### Python Test Client
+
+Use the included Python test client for basic testing:
 
 ```bash
-# Health check (if implemented)
-curl http://localhost:8000/health
+# Test local endpoint
+python test_client.py
 
-# AG-UI endpoint
+# Test remote endpoint (Foundry deployment)
+python test_client.py https://your-agent.azurewebsites.net
+```
+
+#### TypeScript Test Client (Recommended for Foundry)
+
+For comprehensive testing of Foundry-deployed agents, use the TypeScript test client:
+
+```bash
+# Navigate to test client directory
+cd ts-test-client
+
+# Install dependencies
+npm install
+
+# Configure the agent URL in .env or pass as argument
+npm run dev -- https://your-agent-on-foundry.azurewebsites.net
+```
+
+The TypeScript client tests:
+- ✅ Basic connectivity to the AG-UI endpoint
+- ✅ Simple chat interactions
+- ✅ Knowledge base queries via MCP tools
+- ✅ Multi-turn conversations
+- ✅ Error handling
+
+See [ts-test-client/README.md](./ts-test-client/README.md) for detailed documentation.
+
+#### Manual Testing with curl
+
+```bash
+# Test basic connectivity
 curl http://localhost:8000/
+
+# Send a chat message
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
+  }'
 ```
 
 ### Frontend Integration
